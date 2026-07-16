@@ -1,6 +1,6 @@
 # 원연정 — Fashion × AI 포트폴리오
 
-**🔗 사이트 주소:** https://yeonjung77.github.io/YEONJUNG/
+**🔗 [바로가기](https://yeonjung77.github.io/YEONJUNG/)**
 
 ## 디렉토리 구조
 
