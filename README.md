@@ -1,8 +1,5 @@
 # 원연정 — Fashion × AI 포트폴리오
 
-패션 도메인 지식과 AI를 연결하는 포트폴리오 & 기술 블로그 사이트.
-빌드 도구 없이 순수 HTML로 구성되어 있어, 브라우저에서 `index.html`을 열면 바로 확인할 수 있습니다.
-
 **🔗 사이트 주소:** https://yeonjung77.github.io/YEONJUNG/
 
 ## 디렉토리 구조
