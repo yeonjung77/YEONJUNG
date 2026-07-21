@@ -17,3 +17,7 @@ CLAUDE.md
 *.log
 *.tmp
 Thumbs.db
+
+# 도구가 생성하는 로컬 파일
+.playwright-mcp/
+.claude/

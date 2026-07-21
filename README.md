@@ -8,7 +8,7 @@
 ├── index.html          # 메인 페이지 (사이트 진입점 — 루트 유지)
 ├── pages/              # 메인 서브페이지
 │   ├── about.html          # 소개
-│   ├── projects.html       # 프로젝트 목록 (CV 베이직 · STL 카드)
+│   ├── projects.html       # 프로젝트 목록 (CV 베이직 · STL · RAG 카드)
 │   ├── trend-log.html      # 트렌드 로그 (글 목록)
 │   └── contact.html        # 연락처
 ├── posts/              # 세부 콘텐츠
@@ -26,8 +26,11 @@
 │       │   │   ├── p5_generation.html       # P5 Text-to-Fashion 생성 (인터랙티브 데모 내장)
 │       │   │   └── p9_trend_lifecycle.html  # STL 트렌드 수명주기 분류 (독립 프로젝트)
 │       │   └── assets/img/projects/         # 상세 페이지용 이미지 (p1~p5 결과 그래프, p4 샘플, p5 생성 결과)
-│       └── stl/
-│           └── index.html      # STL 트렌드 수명주기 라이브 데모 (p9 페이지에 iframe으로 매립)
+│       ├── stl/
+│       │   └── index.html      # STL 트렌드 수명주기 라이브 데모 (p9 페이지에 iframe으로 매립)
+│       └── fashion-rag/        # Fashion Insight RAG (The State of Fashion 10개년 Q&A)
+│           ├── index.html          # 프로젝트 상세 (파이프라인 · 설계 결정 · 회고)
+│           └── demo/index.html     # Q&A 데모 (사전 생성 답변 + 근거 발췌, 상세에 iframe 매립)
 ├── assets/
 │   └── images/         # 이미지 원본 소재 (profile-original.jpg 등, 웹에서 참조하지 않음)
 └── docs/
