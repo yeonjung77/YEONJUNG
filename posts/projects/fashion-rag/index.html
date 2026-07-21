@@ -474,11 +474,12 @@ sup.fn{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:0}
   padding:20px 20px 16px;box-shadow:var(--shadow-sm);
 }
 .stat .num{
+  display:block;
   font-size:clamp(24px,3vw,30px);font-weight:800;letter-spacing:-.03em;line-height:1.1;
   color:var(--accent);font-variant-numeric:tabular-nums;
 }
-.stat .lbl{margin-top:8px;font-size:12.5px;font-weight:600;color:var(--text-soft);line-height:1.55}
-.stat .src{margin-top:8px;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--text-faint)}
+.stat .lbl{display:block;margin-top:8px;font-size:12.5px;font-weight:600;color:var(--text-soft);line-height:1.55}
+.stat .src{display:block;margin-top:8px;font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--text-faint)}
 
 /* flow map (article roadmap) — stepper on a line, distinct from stat cards */
 .flow-map{margin-top:72px}

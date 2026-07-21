@@ -365,6 +365,21 @@ a.card:hover .glyph{transform:scale(1.07)}
     linear-gradient(140deg,#23304F 0%,#141821 100%);
   background-size:100% 100%,auto,auto,auto;
 }
+.th-panel{
+  background-color:#101722;color:#F5F6FA;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200'%3E%3Cg fill='none' stroke='rgba(255,255,255,.4)' stroke-width='1.4'%3E%3Crect x='52' y='118' width='26' height='44'/%3E%3Crect x='94' y='92' width='26' height='70'/%3E%3Crect x='136' y='70' width='26' height='92'/%3E%3Crect x='178' y='104' width='26' height='58'/%3E%3C/g%3E%3Cg fill='rgba(255,255,255,.5)'%3E%3Ccircle cx='236' cy='64' r='7'/%3E%3Ccircle cx='258' cy='58' r='7'/%3E%3Ccircle cx='280' cy='66' r='7'/%3E%3C/g%3E%3Cpath d='M228 84c4-8 12-12 16-12M252 78c4-8 12-12 16-12M272 86c4-8 12-12 16-12' stroke='rgba(255,255,255,.35)' stroke-width='1.4' fill='none'/%3E%3C/svg%3E");
+  background-size:cover;background-position:center;
+}
+.th-aix{
+  background-color:#12101E;color:#F5F6FA;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 200'%3E%3Cg fill='rgba(255,255,255,.55)'%3E%3Ccircle cx='48' cy='58' r='2.5'/%3E%3Ccircle cx='92' cy='142' r='2'/%3E%3Ccircle cx='150' cy='44' r='2.5'/%3E%3Ccircle cx='218' cy='150' r='2'/%3E%3Ccircle cx='262' cy='62' r='2.5'/%3E%3Ccircle cx='186' cy='96' r='2'/%3E%3Ccircle cx='120' cy='108' r='2'/%3E%3C/g%3E%3Ccircle cx='160' cy='100' r='34' fill='none' stroke='rgba(255,255,255,.65)' stroke-width='1.6' stroke-dasharray='4 7'/%3E%3Ccircle cx='160' cy='100' r='7' fill='%23EFC6CB'/%3E%3Cpath d='M36 30 h20 M36 30 v20 M284 30 h-20 M284 30 v20 M36 170 h20 M36 170 v-20 M284 170 h-20 M284 170 v-20' stroke='%23EFC6CB' stroke-width='3' stroke-linecap='round' fill='none'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 24px),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 24px),
+    linear-gradient(140deg,#2A2246 0%,#12101E 100%);
+  background-size:100% 100%,auto,auto,auto;
+}
 .cmeta{
   margin-top:15px;padding:0 8px;display:flex;align-items:center;gap:10px;
   font-size:10.5px;font-weight:650;letter-spacing:.12em;color:var(--text-faint);
@@ -721,11 +736,25 @@ footer{margin-top:110px;border-top:1px solid var(--line);padding-top:28px;paddin
   <header class="page-hero wrap">
     <h1 data-text="Projects">Projects</h1>
     <p class="desc">완성된 결과보다 만들어지는 과정을 믿습니다.<br>문제 정의부터 데이터, 모델, 데모, 회고까지 — 프로젝트를 만든 모든 단계를 담았습니다.</p>
-    <p class="count">3 ENTRIES — UPDATED 2026</p>
+    <p class="count">4 ENTRIES — UPDATED 2026</p>
   </header>
 
   <section class="wrap" style="padding-top:44px">
     <div class="cards">
+    <a class="card" href="../posts/projects/persona-panel/index.html">
+      <div class="thumb th-panel"><span class="glyph">VCP</span><span class="tcode">SYNTHETIC PERSONA · PANEL</span></div>
+      <div class="cmeta"><span>Data · LLM pipeline</span><span class="tag">Live Demo</span></div>
+      <h3>가상 소비자 패널 — 1,000명 한국인 패션 페르소나</h3>
+      <p class="cdesc">NVIDIA 합성 페르소나에 통계청 실측 통계로 앵커링한 패션 소비 필드 6개를 생성해 1,000명 데이터셋을 구축하고, 신상품 반응을 세그먼트별로 시뮬레이션하는 가상 패널 데모입니다.</p>
+      <span class="more-cta">&rarr; 자세히 보기</span>
+    </a>
+    <a class="card" href="../posts/projects/fashion-rag/index.html">
+      <div class="thumb th-rag"><span class="glyph">RAG</span><span class="tcode">NLP · RETRIEVAL × GENERATION</span></div>
+      <div class="cmeta"><span>NLP · RAG</span><span class="tag">Demo</span></div>
+      <h3>Fashion Insight RAG</h3>
+      <p class="cdesc">The State of Fashion 10개년 리포트를 지식 베이스로 구축한 RAG 파이프라인 — 실무 질문에 근거(연도·페이지)가 달린 답변을 돌려주고, 인용 59건을 원문과 전수 대조해 검증했습니다.</p>
+      <span class="more-cta">&rarr; 자세히 보기</span>
+    </a>
     <a class="card" href="../posts/projects/cv-projects/index.html">
       <div class="thumb th-cv"><span class="glyph">CV</span><span class="tcode">BASIC · STUDY SERIES</span></div>
       <div class="cmeta"><span>Study series</span><span class="tag">진행중</span></div>
@@ -738,13 +767,6 @@ footer{margin-top:110px;border-top:1px solid var(--line);padding-top:28px;paddin
       <div class="cmeta"><span>Data analysis</span><span class="tag">Live Demo</span></div>
       <h3>패션 트렌드 수명주기 분류</h3>
       <p class="cdesc">Google Trends 검색 데이터를 STL 시계열 분해로 분석해 패션 아이템 156개를 메가·마이크로·스테디로 분류하고, 새 키워드를 라이브로 분류합니다.</p>
-      <span class="more-cta">&rarr; 자세히 보기</span>
-    </a>
-    <a class="card" href="../posts/projects/fashion-rag/index.html">
-      <div class="thumb th-rag"><span class="glyph">RAG</span><span class="tcode">NLP · RETRIEVAL × GENERATION</span></div>
-      <div class="cmeta"><span>NLP · RAG</span><span class="tag">Demo</span></div>
-      <h3>Fashion Insight RAG</h3>
-      <p class="cdesc">The State of Fashion 10개년 리포트를 지식 베이스로 구축한 RAG 파이프라인 — 실무 질문에 근거(연도·페이지)가 달린 답변을 돌려주고, 인용 59건을 원문과 전수 대조해 검증했습니다.</p>
       <span class="more-cta">&rarr; 자세히 보기</span>
     </a>
     </div>
