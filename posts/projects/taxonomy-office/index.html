@@ -1,8 +1,7 @@
 <meta charset="utf-8">
-<title>P5. Text-to-Fashion 이미지 생성 — 원연정</title>
+<title>텍소노미 오피스 — 원연정</title>
 <script>try{var _yt=localStorage.getItem('yj-theme');if(_yt)document.documentElement.setAttribute('data-theme',_yt);}catch(e){}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Stable Diffusion v1.5를 FashionGen으로 LoRA 파인튜닝 — FID 72.4→59.6 개선, 파인튜닝 전/후·rank 비교">
 <style>/* ============ FONT ============ */
 @font-face{
   font-family:'Pretendard';
@@ -27,12 +26,14 @@
   --accent-soft:rgba(5,70,200,.07);
   --sky:#63D9FF;
   --blue-deep:#04339B;
-  --hero:#0546C8;
   --grad-b:#0546C8;
-  --bar:#0546C8;
+  --bar:var(--accent);
   --shadow-sm:0 1px 2px rgba(19,20,23,.05);
-  --shadow-md:0 10px 28px -18px rgba(19,20,23,.18);
-  --shadow-lg:0 12px 32px -18px rgba(5,70,200,.35);
+  --shadow-md:0 14px 34px -24px rgba(19,20,23,.22);
+  --shadow-lg:0 22px 44px -26px rgba(5,70,200,.30);
+  --dot:transparent;
+  --blob-a:rgba(5,70,200,.08);
+  --blob-b:transparent;
 }
 @media (prefers-color-scheme: dark){
   :root{
@@ -48,12 +49,14 @@
     --accent-soft:rgba(46,107,255,.14);
     --sky:#63D9FF;
     --blue-deep:#0A3FB0;
-    --hero:#0A3FB0;
     --grad-b:#2E6BFF;
-    --bar:#2E6BFF;
-    --shadow-sm:0 1px 2px rgba(0,0,0,.25);
-    --shadow-md:0 12px 32px -16px rgba(0,0,0,.5);
-    --shadow-lg:0 12px 32px -18px rgba(0,0,0,.6);
+    --bar:var(--accent);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow-md:0 14px 34px -24px rgba(0,0,0,.55);
+    --shadow-lg:0 22px 44px -26px rgba(0,0,0,.6);
+    --dot:transparent;
+    --blob-a:rgba(46,107,255,.10);
+    --blob-b:transparent;
   }
 }
 :root[data-theme="light"]{
@@ -69,12 +72,14 @@
   --accent-soft:rgba(5,70,200,.07);
   --sky:#63D9FF;
   --blue-deep:#04339B;
-  --hero:#0546C8;
   --grad-b:#0546C8;
-  --bar:#0546C8;
+  --bar:var(--accent);
   --shadow-sm:0 1px 2px rgba(19,20,23,.05);
-  --shadow-md:0 10px 28px -18px rgba(19,20,23,.18);
-  --shadow-lg:0 12px 32px -18px rgba(5,70,200,.35);
+  --shadow-md:0 14px 34px -24px rgba(19,20,23,.22);
+  --shadow-lg:0 22px 44px -26px rgba(5,70,200,.30);
+  --dot:transparent;
+  --blob-a:rgba(5,70,200,.08);
+  --blob-b:transparent;
 }
 :root[data-theme="dark"]{
   --bg:#131313;
@@ -89,12 +94,14 @@
   --accent-soft:rgba(46,107,255,.14);
   --sky:#63D9FF;
   --blue-deep:#0A3FB0;
-  --hero:#0A3FB0;
   --grad-b:#2E6BFF;
-  --bar:#2E6BFF;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.25);
-  --shadow-md:0 12px 32px -16px rgba(0,0,0,.5);
-  --shadow-lg:0 12px 32px -18px rgba(0,0,0,.6);
+  --bar:var(--accent);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow-md:0 14px 34px -24px rgba(0,0,0,.55);
+  --shadow-lg:0 22px 44px -26px rgba(0,0,0,.6);
+  --dot:transparent;
+  --blob-a:rgba(46,107,255,.10);
+  --blob-b:transparent;
 }
 
 /* ============ BASE ============ */
@@ -112,9 +119,28 @@ body{
   word-break:keep-all;
   font-feature-settings:'ss05';
   overflow-x:clip;
+  counter-reset:sec;
 }
 /* scroll progress bar */
-body::before{content:'';position:fixed;top:0;left:0;z-index:80;height:2px;background:var(--sky);width:var(--scroll,0%);pointer-events:none}
+body::before{
+  content:'';position:fixed;top:0;left:0;z-index:60;height:2px;
+  background:var(--sky);width:var(--scroll,0%);pointer-events:none;
+}
+/* hero band (blueprint cobalt block) */
+.hero-band{position:relative;overflow:hidden;background:var(--accent);color:#FFFFFF}
+@media (prefers-color-scheme: dark){
+  .hero-band{background:var(--blue-deep)}
+}
+:root[data-theme="light"] .hero-band{background:var(--accent)}
+:root[data-theme="dark"] .hero-band{background:var(--blue-deep)}
+/* hero pipeline */
+.hero-pipe{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.hero-pipe .pl-base{fill:none;stroke:#fff;stroke-width:1;opacity:.055}
+.hero-pipe .pl-node{fill:none;stroke:#fff;stroke-width:1;opacity:.10}
+.hero-pipe .pl-flow{fill:none;stroke:#E4F7FF;stroke-width:1.5;stroke-linecap:round;stroke-dasharray:95 1000;stroke-dashoffset:1095;opacity:.38;filter:drop-shadow(0 0 1.5px var(--sky));animation:plFlow 8.5s linear infinite;animation-delay:var(--d,0s)}
+@keyframes plFlow{to{stroke-dashoffset:0}}
+@media (max-width:640px){.hero-pipe .pl-flow{stroke-width:1.3}}
+@media (prefers-reduced-motion:reduce){.hero-pipe .pl-flow{animation:none;stroke-dashoffset:548;opacity:.3}}
 
 /* scroll reveal */
 .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
@@ -129,7 +155,7 @@ a{color:inherit;text-decoration:none}
 a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 img{max-width:100%;display:block}
 
-.mono{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-variant-numeric:tabular-nums}
+.mono{font-weight:600;letter-spacing:.08em;font-variant-numeric:tabular-nums}
 .wrap{max-width:920px;margin-left:auto;margin-right:auto;padding-left:24px;padding-right:24px}
 
 /* ============ NAV ============ */
@@ -141,50 +167,63 @@ nav.site{
   border-bottom:1px solid var(--line);
 }
 .nav-row{
-  max-width:920px;margin:0 auto;padding:15px 24px;
+  max-width:920px;margin:0 auto;padding:16px 24px;
   display:flex;align-items:center;justify-content:space-between;gap:12px 16px;flex-wrap:wrap;
 }
-.wordmark{font-weight:800;font-size:16.5px;letter-spacing:.045em}
-.wordmark em{font-style:normal;font-weight:800;color:var(--accent);letter-spacing:.045em}
-.nav-links{display:flex;gap:14px;list-style:none;flex-wrap:wrap}
+.wordmark{font-weight:800;font-size:16px;letter-spacing:.08em}
+.wordmark em{font-style:normal;font-weight:800;letter-spacing:.08em;color:var(--accent)}
+.nav-links{display:flex;gap:18px;list-style:none;flex-wrap:wrap}
 .nav-links a{
-  font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text-soft);
-  letter-spacing:.08em;text-transform:uppercase;
-  padding:7px 2px;border-bottom:2px solid transparent;
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);
+  padding:6px 0 4px;
+  border-bottom:2px solid transparent;
   transition:color .25s ease,border-color .25s ease;
 }
-.nav-links a:hover{color:var(--accent);border-bottom-color:var(--accent)}
-.nav-links a.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+.nav-links a:hover{color:var(--text);border-color:var(--accent)}
+.nav-links a.on{color:var(--text);border-color:var(--accent);font-weight:700}
 
-/* ============ PAGE HERO (list pages) ============ */
-.page-hero{padding-top:108px;position:relative}
+/* ============ PAGE HERO (cobalt block) ============ */
+.page-hero{padding-top:clamp(64px,9vw,92px);padding-bottom:60px;position:relative;z-index:1}
 .page-hero h1{
   font-weight:700;font-size:clamp(40px,6.5vw,72px);
-  line-height:1.05;letter-spacing:-.03em;
-  animation:riseIn .7s cubic-bezier(.2,.8,.2,1) .05s backwards;
+  line-height:1.05;letter-spacing:-.03em;color:#FFFFFF;
+  animation:riseIn .7s cubic-bezier(.2,.7,.2,1) .05s backwards;
 }
-.page-hero .desc{margin-top:16px;color:var(--text-soft);max-width:38em;text-wrap:pretty;font-size:16.5px;animation:riseIn .7s cubic-bezier(.2,.8,.2,1) .15s backwards}
+.page-hero .desc{margin-top:22px;color:rgba(255,255,255,.82);max-width:34em;text-wrap:pretty;word-break:keep-all;font-size:16.5px;animation:riseIn .7s cubic-bezier(.2,.7,.2,1) .15s backwards}
 .page-hero .count{
-  margin-top:26px;font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--text-faint);font-variant-numeric:tabular-nums;
-  border-bottom:1px solid var(--line);padding-bottom:18px;
-  animation:riseIn .7s cubic-bezier(.2,.8,.2,1) .25s backwards;
+  margin-top:40px;display:flex;justify-content:space-between;gap:10px 18px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(255,255,255,.6);font-variant-numeric:tabular-nums;
+  border-top:1px solid rgba(255,255,255,.28);padding-top:16px;
+  animation:riseIn .7s cubic-bezier(.2,.7,.2,1) .25s backwards;
 }
 
 /* ============ INTRO (index) ============ */
 .intro{padding-top:88px;position:relative}
+.intro::before{
+  content:'';position:absolute;top:-160px;left:-200px;width:560px;height:560px;border-radius:50%;
+  background:radial-gradient(circle,var(--blob-a),transparent 66%);pointer-events:none;z-index:-1;
+}
+.intro::after{
+  content:'';position:absolute;top:-80px;right:-160px;width:460px;height:460px;border-radius:50%;
+  background:radial-gradient(circle,var(--blob-b),transparent 64%);pointer-events:none;z-index:-1;
+}
 .eyebrow{
   display:inline-flex;align-items:center;gap:9px;
-  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+  font-size:12px;font-weight:700;letter-spacing:.2em;color:var(--accent);
   animation:riseIn .7s cubic-bezier(.2,.8,.2,1) .02s backwards;
 }
-.eyebrow::before{content:'';width:6px;height:6px;background:var(--accent)}
+.eyebrow::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--bar)}
 .intro h1{
-  font-size:clamp(30px,5vw,46px);font-weight:700;letter-spacing:-.03em;
+  font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.035em;
   line-height:1.28;text-wrap:balance;max-width:22em;
   animation:riseIn .7s cubic-bezier(.2,.8,.2,1) .12s backwards;
 }
-.intro h1 em{font-style:normal;color:var(--accent)}
+.intro h1 em{
+  font-style:normal;
+  background:linear-gradient(92deg,var(--accent) 10%,var(--grad-b) 90%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
 .intro .lead{
   margin-top:18px;color:var(--text-soft);max-width:37em;text-wrap:pretty;font-size:17px;
   animation:riseIn .7s cubic-bezier(.2,.8,.2,1) .22s backwards;
@@ -221,38 +260,39 @@ nav.site{
   background:var(--bg);border:1px solid var(--line);
   border-radius:999px;padding:5px 14px;white-space:nowrap;
 }
-.links-row{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap}
+.links-row{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap}
 .links-row a{
-  font-size:13px;font-weight:700;
-  padding:9px 18px;border-radius:999px;border:1px solid var(--line-strong);
-  transition:transform .18s,border-color .18s,color .18s,background .18s,box-shadow .18s;
+  font-size:13px;font-weight:600;letter-spacing:.02em;
+  padding:10px 16px;border-radius:6px;border:1px solid var(--line-strong);
+  transition:background .25s ease,color .25s ease,border-color .25s ease;
 }
 .links-row a:first-child{
-  background:linear-gradient(92deg,var(--accent),var(--grad-b));
-  border-color:transparent;color:var(--accent-ink);
+  background:var(--accent);
+  border-color:var(--accent);color:var(--accent-ink);
 }
-.links-row a:hover{transform:translateY(-2px);box-shadow:var(--shadow-sm)}
-.links-row a:not(:first-child):hover{border-color:var(--accent);color:var(--accent)}
+.links-row a:hover{background:var(--blue-deep);border-color:var(--blue-deep);color:#FFFFFF}
 
 /* ============ SECTIONS ============ */
 section{padding-top:96px}
 .sec-head{
-  display:flex;align-items:baseline;gap:14px;
-  border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:28px;
+  display:flex;align-items:flex-end;gap:16px;
+  border-bottom:1px solid var(--line-strong);padding-bottom:16px;margin-bottom:30px;
 }
-.sec-head h2{font-weight:800;font-size:25px;letter-spacing:-.025em}
+.sec-head h2{font-weight:700;font-size:clamp(26px,3.2vw,40px);letter-spacing:-.02em}
 .sec-head h2::before{
-  content:'';display:inline-block;width:22px;height:5px;border-radius:99px;
-  background:var(--bar);margin-right:12px;vertical-align:.22em;
+  counter-increment:sec;content:counter(sec,decimal-leading-zero);
+  display:block;
+  font-family:var(--mono);font-weight:500;
+  font-size:11px;color:var(--accent);letter-spacing:.08em;
+  margin-bottom:6px;
 }
-.sec-head .hint{font-size:13px;color:var(--text-faint);font-weight:500}
+.sec-head .hint{font-size:12.5px;color:var(--text-faint);font-weight:500}
 .sec-head .more{
-  margin-left:auto;font-size:12.5px;font-weight:700;color:var(--accent);white-space:nowrap;
-  padding:7px 15px;border-radius:999px;border:1px solid transparent;
-  background:var(--accent-soft);
-  transition:border-color .18s,transform .18s;
+  margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text);white-space:nowrap;
+  padding:8px 16px;border:1px solid var(--line-strong);border-radius:6px;
+  transition:background .25s ease,color .25s ease,border-color .25s ease;
 }
-.sec-head .more:hover{border-color:var(--accent);transform:translateX(2px)}
+.sec-head .more:hover{background:var(--accent);color:#FFFFFF;border-color:var(--accent)}
 
 /* ============ CARDS ============ */
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
@@ -386,55 +426,36 @@ a.val:hover{color:var(--accent)}
 .cv-detail a{color:var(--accent);font-weight:650}
 .cv-detail a:hover{text-decoration:underline;text-underline-offset:3px}
 
-/* ============ ARTICLE / HERO BAND ============ */
-.hero-band{
-  position:relative;overflow:hidden;
-  background:var(--hero);color:#fff;
-  margin-top:26px;
-}
-/* hero pipeline */
-.hero-pipe{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
-.hero-pipe .pl-base{fill:none;stroke:#fff;stroke-width:1;opacity:.055}
-.hero-pipe .pl-node{fill:none;stroke:#fff;stroke-width:1;opacity:.10}
-.hero-pipe .pl-flow{fill:none;stroke:#E4F7FF;stroke-width:1.5;stroke-linecap:round;stroke-dasharray:95 1000;stroke-dashoffset:1095;opacity:.38;filter:drop-shadow(0 0 1.5px var(--sky));animation:plFlow 8.5s linear infinite;animation-delay:var(--d,0s)}
-@keyframes plFlow{to{stroke-dashoffset:0}}
-@media (max-width:640px){.hero-pipe .pl-flow{stroke-width:1.3}}
-@media (prefers-reduced-motion:reduce){.hero-pipe .pl-flow{animation:none;stroke-dashoffset:548;opacity:.3}}
-.article-head{max-width:760px;margin:0 auto;padding:76px 24px 60px;position:relative;z-index:1}
+/* ============ ARTICLE ============ */
+.article-head{max-width:760px;margin:0 auto;padding:88px 24px 0;position:relative}
 .article-head .cat{
-  display:inline-flex;align-items:center;gap:10px;
-  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.72);
-  animation:riseIn .7s cubic-bezier(.2,.7,.2,1) .02s backwards;
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:11.5px;font-weight:750;letter-spacing:.18em;color:var(--accent);
+  animation:riseIn .7s cubic-bezier(.2,.8,.2,1) .02s backwards;
 }
-.article-head .cat::before{content:'';width:6px;height:6px;background:var(--sky)}
+.article-head .cat::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--bar)}
 .article-head h1{
-  margin-top:20px;
-  font-weight:700;font-size:clamp(40px,6.5vw,72px);
-  line-height:1.05;letter-spacing:-.03em;text-wrap:balance;color:#fff;
-  animation:riseIn .7s cubic-bezier(.2,.7,.2,1) .1s backwards;
+  margin-top:16px;font-weight:800;font-size:clamp(28px,4.8vw,42px);
+  line-height:1.32;letter-spacing:-.035em;text-wrap:balance;
+  animation:riseIn .7s cubic-bezier(.2,.8,.2,1) .1s backwards;
 }
 .article-head .standfirst{
-  margin-top:22px;font-size:18px;line-height:1.75;color:rgba(255,255,255,.82);text-wrap:pretty;max-width:36em;
-  animation:riseIn .7s cubic-bezier(.2,.7,.2,1) .18s backwards;
+  margin-top:18px;font-size:17px;color:var(--text-soft);text-wrap:pretty;max-width:36em;
+  animation:riseIn .7s cubic-bezier(.2,.8,.2,1) .18s backwards;
 }
 .article-head .byline{
-  margin-top:34px;display:flex;gap:8px 18px;flex-wrap:wrap;align-items:baseline;justify-content:space-between;
-  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.6);
-  border-top:1px solid rgba(255,255,255,.25);padding-top:16px;
+  margin-top:26px;display:flex;gap:8px 18px;flex-wrap:wrap;align-items:baseline;
+  font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--text-faint);
+  border-bottom:1px solid var(--line);padding-bottom:20px;
   font-variant-numeric:tabular-nums;
-  animation:riseIn .7s cubic-bezier(.2,.7,.2,1) .26s backwards;
+  animation:riseIn .7s cubic-bezier(.2,.8,.2,1) .26s backwards;
 }
-.article-head .byline b{color:#fff;font-weight:750}
+.article-head .byline b{color:var(--text-soft);font-weight:750}
 
-.prose{max-width:760px;margin:0 auto;padding:40px 24px 0;counter-reset:sec}
+.prose{max-width:760px;margin:0 auto;padding:8px 24px 0}
 .prose h2{
-  margin-top:72px;font-size:clamp(26px,3.2vw,40px);font-weight:700;letter-spacing:-.02em;line-height:1.3;
-  counter-increment:sec;border-top:1px solid var(--line);padding-top:18px;
-}
-.prose h2::before{
-  content:counter(sec,decimal-leading-zero);
-  display:block;font-family:var(--mono);font-style:normal;font-weight:600;font-size:11px;
-  color:var(--accent);letter-spacing:.08em;margin-bottom:8px;
+  margin-top:72px;font-size:clamp(26px,3.5vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1.25;
+  border-top:1px solid var(--line-strong);padding-top:22px;
 }
 .prose h3{margin-top:36px;font-size:16.5px;font-weight:750;letter-spacing:-.01em}
 .prose p{margin-top:16px;font-size:15.5px;line-height:1.9;color:var(--text-soft);text-wrap:pretty}
@@ -447,41 +468,42 @@ a.val:hover{color:var(--accent)}
 sup.fn{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:0}
 
 .pullquote{
-  margin:48px 0 0;padding:6px 0 6px 22px;
+  margin:44px 0 0;padding:6px 0 6px 22px;
   border-left:3px solid var(--accent);
-  font-size:21px;font-weight:700;line-height:1.7;letter-spacing:-.015em;color:var(--text);
+  font-size:19px;font-weight:750;line-height:1.65;letter-spacing:-.015em;color:var(--text);
   text-wrap:balance;
 }
-.pullquote::before{
-  content:'';display:block;width:22px;height:6px;background:var(--accent);margin-bottom:14px;
-}
-.pullquote small{display:block;margin-top:10px;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--text-faint);letter-spacing:.08em;text-transform:uppercase}
+.pullquote small{display:block;margin-top:10px;font-size:12px;font-weight:600;color:var(--text-faint);letter-spacing:.06em}
 
-/* stat cards */
+/* stat row (cobalt cards) */
 .stat-row{
   margin-top:36px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;
 }
-.stat{border:1.6px solid var(--accent);
-  background:var(--bg);color:var(--accent-ink);border-radius:10px;
-  padding:22px 20px;
+.stat{
+  background:var(--bg);color:var(--accent);border:1.6px solid var(--accent);border-radius:10px;
+  padding:24px 22px 20px;box-shadow:none;
 }
 .stat .num{
-  font-size:clamp(30px,4vw,44px);font-weight:800;letter-spacing:-.03em;line-height:1.1;
+  font-weight:800;
+  font-size:clamp(36px,4.5vw,56px);letter-spacing:-.03em;line-height:1.05;
   color:var(--accent);font-variant-numeric:tabular-nums;
 }
-.stat .lbl{margin-top:10px;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);line-height:1.6}
-.stat .src{margin-top:8px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb,var(--accent) 60%,transparent)}
+.stat .lbl{margin-top:10px;font-size:12.5px;font-weight:500;color:var(--accent);line-height:1.6}
+.stat .src{margin-top:12px;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb,var(--accent) 60%,transparent)}
+.stat .num,.stat .lbl,.stat .src{display:block}
+.stat .num small{font-size:.42em;font-weight:600;color:rgba(255,255,255,.8);margin-left:6px;letter-spacing:0}
 
 /* flow map (article roadmap) — stepper on a line, distinct from stat cards */
 .flow-map{margin-top:72px}
 .fm-title{
-  font-size:11px;font-weight:750;letter-spacing:.22em;color:var(--text-faint);
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);
   margin-bottom:18px;
 }
+.fm-title::before{content:'';display:inline-block;width:6px;height:6px;background:var(--accent);margin-right:8px}
 .fm-steps{display:flex;align-items:flex-start}
 .fm-step{flex:1;position:relative;padding:24px 20px 0 0}
 .fm-step::before{
-  content:'';position:absolute;top:0;left:1px;width:13px;height:13px;border-radius:50%;
+  content:'';position:absolute;top:0;left:1px;width:11px;height:11px;
   background:var(--bar);box-shadow:0 0 0 4px var(--accent-soft);
 }
 .fm-step:not(:last-child)::after{
@@ -489,11 +511,11 @@ sup.fn{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:0}
   background:var(--line);
 }
 .fm-step b{
-  display:block;font-size:12px;letter-spacing:.16em;color:var(--accent);font-weight:800;
+  display:block;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--accent);font-weight:700;
   font-variant-numeric:tabular-nums;transition:letter-spacing .2s;
 }
 .fm-step span{display:block;margin-top:6px;font-size:13px;font-weight:550;color:var(--text-soft);line-height:1.6;max-width:15em}
-.fm-step:hover b{letter-spacing:.22em}
+.fm-step:hover b{letter-spacing:.12em}
 @media (max-width:600px){
   .fm-steps{flex-direction:column;gap:22px}
   .fm-step{padding:0 0 0 28px}
@@ -501,17 +523,108 @@ sup.fn{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:0}
   .fm-step:not(:last-child)::after{display:none}
 }
 
-/* value-chain diagram */
+/* figure frame */
 .figure{margin-top:40px}
 .figure .fig-frame{
   background:var(--surface);border:1px solid var(--line-strong);border-radius:10px;
   padding:clamp(18px,3vw,28px);box-shadow:none;overflow-x:auto;
 }
 .figure figcaption{
-  margin-top:12px;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--text-faint);
-  letter-spacing:.08em;text-align:left;
+  margin-top:14px;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text-faint);
+  letter-spacing:.04em;text-align:left;
 }
-.figure figcaption::before{content:'';display:inline-block;width:6px;height:6px;background:var(--accent);margin-right:8px}
+.figure figcaption::before{
+  content:'';display:inline-block;width:6px;height:6px;background:var(--accent);
+  margin-right:9px;
+}
+.figure .fig-frame{padding:0;overflow:hidden}
+.figure .fig-frame img,.figure .fig-frame video{display:block;width:100%;height:auto}
+.figure .fig-frame--pad{padding:clamp(14px,2.4vw,22px);background:var(--surface)}
+.media-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:40px}
+.media-grid .figure{margin-top:0}
+@media (max-width:680px){.media-grid{grid-template-columns:1fr}}
+.callout{margin-top:28px;padding:18px 20px;border-left:3px solid var(--accent);
+  background:var(--accent-soft);border-radius:0 10px 10px 0;font-size:14.5px;line-height:1.8;color:var(--text-soft)}
+.callout strong{color:var(--accent)}
+.rolegrid{list-style:none;margin:18px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:680px){.rolegrid{grid-template-columns:1fr}}
+.rolegrid li{margin:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;line-height:1.6;color:var(--text-soft)}
+.rolegrid li b{color:var(--text);font-weight:700}
+.rolegrid li span{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+/* ===== taxonomy-office : editorial components ===== */
+.tk{max-width:820px;margin:0 auto;padding:0 24px}
+.tk-ey{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+.tk-ey::before{content:'';display:inline-block;width:20px;height:1px;background:var(--accent);vertical-align:middle;margin-right:10px}
+.tk-big{margin-top:18px;font-size:clamp(24px,4.1vw,40px);font-weight:760;line-height:1.34;letter-spacing:-.022em;color:var(--text);text-wrap:balance;word-break:keep-all}
+.tk-big em{color:var(--accent);font-style:normal}
+.tk-sub{margin-top:20px;font-size:16px;line-height:1.92;color:var(--text-soft);word-break:keep-all}
+.tk-sub strong{color:var(--accent);font-weight:700}
+.tk-h{max-width:820px;margin:0 auto;padding:0 24px}
+.tk-h h2{font-size:clamp(23px,3.4vw,34px);font-weight:750;letter-spacing:-.02em;color:var(--text);line-height:1.28;word-break:keep-all}
+.tk-h h2 em{color:var(--accent);font-style:normal}
+.tk-h p{margin-top:16px;font-size:15.5px;line-height:1.9;color:var(--text-soft);word-break:keep-all}
+.tk-h p strong{color:var(--accent);font-weight:700}
+section.tk-sec{padding-top:clamp(56px,8vw,84px)}
+/* chaos -> order */
+.collapse{max-width:560px;margin:30px auto 0;padding:0 24px;display:grid;gap:14px}
+.cq{background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--accent) 5%,var(--surface)));border:1px solid var(--line);border-radius:16px;padding:18px 20px;text-align:center}
+.cq .chaos{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.cq .chaos span{font-size:12.5px;color:var(--text-soft);border:1px dashed var(--line-strong);border-radius:20px;padding:5px 12px;line-height:1.3;background:var(--bg)}
+.cq .fnl{margin:10px auto 8px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--accent)}
+.cq .fnl small{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint)}
+.cq .fnl svg{width:15px;height:15px;display:block}
+.cq .std{display:inline-block;font-size:16.5px;font-weight:750;color:#fff;background:var(--accent);border-radius:22px;padding:9px 22px;box-shadow:0 8px 20px -10px var(--accent)}
+/* big number band */
+.nums{max-width:900px;margin:30px auto 0;padding:0 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+@media(max-width:680px){.nums{grid-template-columns:1fr 1fr;gap:20px 16px}}
+.nums .n{border-top:2px solid var(--accent);padding-top:12px}
+.nums .n b{display:block;font-size:clamp(27px,4vw,40px);font-weight:800;color:var(--text);letter-spacing:-.015em;font-variant-numeric:tabular-nums;line-height:1}
+.nums .n b small{font-size:.42em;font-weight:700;margin-left:3px;color:var(--text-soft)}
+.nums .n span{display:block;margin-top:8px;font-size:12px;color:var(--text-soft);line-height:1.5}
+/* team roster */
+.teams{max-width:900px;margin:26px auto 0;padding:0 24px;display:flex;flex-direction:column;gap:26px}
+.tgroup .thead{display:flex;align-items:baseline;gap:9px;font-size:14px;font-weight:800;color:var(--text);margin-bottom:12px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.tgroup .thead .tcount{margin-left:auto;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.04em;color:var(--text-faint)}
+.tgroup .tcards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media(max-width:680px){.tgroup .tcards{grid-template-columns:1fr}}
+@media(max-width:680px){.team{grid-template-columns:1fr}}
+.tm{display:flex;gap:13px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:13px 15px;background:var(--bg)}
+.tm .tm-face{flex:0 0 auto;width:46px;height:52px;border-radius:10px;image-rendering:pixelated;background:var(--surface);border:1px solid var(--line);object-fit:cover}
+.tm .grp{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);margin-bottom:3px}
+.tm .grp i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.tm b{font-size:13.5px;color:var(--text)}
+.tm p{margin-top:3px;font-size:12.5px;color:var(--text-soft);line-height:1.55}
+.cq .to .cnt2{font-family:var(--mono);font-size:12px;color:var(--text-faint)}
+.cq .to .cnt2 b{color:var(--accent);font-size:14px}
+/* pull quote */
+.pull{max-width:780px;margin:0 auto;padding:0 24px}
+.pull p{font-size:clamp(21px,3.1vw,30px);font-weight:730;line-height:1.5;letter-spacing:-.018em;color:var(--text);text-wrap:balance;word-break:keep-all}
+.pull p em{color:var(--accent);font-style:normal}
+.pull cite{display:block;margin-top:16px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-faint);font-style:normal}
+/* receipt */
+.receipt{max-width:400px;margin:36px auto 0;padding:22px 24px;border:1px solid var(--line-strong);border-radius:12px;background:var(--surface);font-family:var(--mono)}
+.receipt .rt{text-align:center;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-faint);padding-bottom:14px;border-bottom:1px dashed var(--line-strong)}
+.receipt .rr{display:flex;justify-content:space-between;gap:16px;padding:9px 0;font-size:12.5px;color:var(--text-soft);border-bottom:1px dashed var(--line)}
+.receipt .rr span:last-child{color:var(--text);white-space:nowrap}
+.receipt .rr.tot{border-bottom:none;border-top:2px solid var(--text);margin-top:6px;padding-top:13px;font-size:15px;font-weight:700;color:var(--text)}
+.receipt .rr.tot span:last-child{color:var(--accent)}
+.receipt .rc{text-align:center;margin-top:15px;font-size:10.5px;letter-spacing:.05em;color:var(--text-faint);line-height:1.7}
+/* 자라는 텍소노미 모션 그래픽 */
+.grow{max-width:600px;margin:30px auto 0;padding:22px 22px 18px;border:1px solid var(--line);border-radius:16px;background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--accent) 4%,var(--surface)))}
+.grow .ghead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:14px}
+.grow .ghead b{font-size:13.5px;font-weight:800;color:var(--text)}
+.grow .ghead .gnow{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);white-space:nowrap}
+.grow .gbranch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 0;border-top:1px solid var(--line)}
+.grow .gbranch:first-of-type{border-top:none}
+.grow .l2{font-size:12.5px;font-weight:700;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:5px 12px;min-width:82px;text-align:center}
+.grow .garw{color:var(--text-faint);font-size:13px}
+.grow .l3{font-size:12px;font-weight:650;color:#fff;background:var(--accent);border-radius:9px;padding:5px 11px;box-shadow:0 6px 14px -8px var(--accent)}
+.grow .l3.new{animation:sprout 6.5s ease-in-out var(--d,0s) infinite}
+.grow .gdim{color:var(--text-faint);font-size:12.5px}
+.grow .gfoot{margin-top:13px;padding-top:12px;border-top:1px dashed var(--line-strong);font-size:11.5px;color:var(--text-soft);line-height:1.6}
+.grow .gfoot b{color:var(--accent)}
+@keyframes sprout{0%,5%{opacity:0;transform:translateX(-10px) scale(.78)}13%{opacity:1;transform:translateX(0) scale(1)}92%{opacity:1;transform:translateX(0) scale(1)}100%{opacity:0;transform:translateX(-10px) scale(.78)}}
+@media (prefers-reduced-motion:reduce){.grow .l3.new{animation:none;opacity:1}}
 .vchain{display:grid;grid-template-columns:repeat(5,1fr);gap:0;min-width:640px;align-items:stretch}
 .vc-step{position:relative;padding:0 14px 0 0;margin-right:14px}
 .vc-step:not(:last-child)::after{
@@ -563,7 +676,7 @@ sup.fn{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:0}
 /* data table */
 .data-table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
 .data-table th{
-  text-align:left;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  text-align:left;font-size:10.5px;font-weight:800;letter-spacing:.14em;
   color:var(--text-faint);padding:4px 12px 12px;border-bottom:1px solid var(--line-strong);
   white-space:nowrap;
 }
@@ -634,34 +747,38 @@ sup.fn{font-size:10px;color:var(--accent);font-weight:700;letter-spacing:0}
 .src-block li a:hover{text-decoration:underline;text-underline-offset:3px}
 .back-link{
   display:inline-flex;align-items:center;gap:7px;margin-top:48px;
-  font-size:13px;font-weight:600;letter-spacing:.02em;color:var(--text);
-  padding:10px 16px;border-radius:6px;background:transparent;border:1px solid var(--line-strong);
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text);
+  padding:10px 16px;border:1px solid var(--line-strong);border-radius:6px;background:transparent;
   transition:background .25s ease,color .25s ease,border-color .25s ease;
 }
-.back-link:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.back-link:hover{background:var(--accent);color:#FFFFFF;border-color:var(--accent)}
 .hero-back{display:inline-block;margin:0;border-color:rgba(255,255,255,.45);color:#fff}
 .hero-topbar{padding-top:30px;position:relative;z-index:1}
 .hero-topbar--narrow{max-width:760px;margin:0 auto;padding-left:24px;padding-right:24px}
 .hero-back:hover{background:#fff;color:var(--accent);border-color:#fff}
+.back-row .back-link{margin-top:28px}
 
 @media (max-width:700px){
   .stat-row{grid-template-columns:1fr}
   .era-grid{grid-template-columns:1fr}
 }
 
-/* ============ FOOTER ============ */
-footer{margin-top:110px;border-top:1px solid var(--line);padding-top:28px;padding-bottom:56px}
+/* ============ FOOTER (colophon) ============ */
+footer{margin-top:110px;border-top:1px solid var(--line-strong);padding-top:30px;padding-bottom:56px}
 .foot{
   max-width:920px;margin:0 auto;padding-left:24px;padding-right:24px;
   display:flex;align-items:baseline;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;
 }
-.foot .fmark{font-weight:800;font-size:15px;letter-spacing:.045em}
-.foot .fnav{display:flex;gap:14px;list-style:none;flex-wrap:wrap}
+.foot .fmark{font-weight:800;font-size:15px;letter-spacing:.08em}
+.foot .fnav{display:flex;gap:18px;list-style:none;flex-wrap:wrap}
 .foot .fnav a{
-  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);
-  padding:5px 2px;transition:color .25s ease;
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text-soft);
+  padding:4px 0;
+  background-image:linear-gradient(currentColor,currentColor);
+  background-repeat:no-repeat;background-size:0% 1px;background-position:0 100%;
+  transition:color .35s cubic-bezier(.16,1,.3,1),background-size .35s cubic-bezier(.16,1,.3,1);
 }
-.foot .fnav a:hover{color:var(--accent)}
+.foot .fnav a:hover{color:var(--text);background-size:100% 1px}
 .foot .fnote{
   font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);
 }
@@ -696,321 +813,261 @@ footer{margin-top:110px;border-top:1px solid var(--line);padding-top:28px;paddin
 @keyframes waveFlow{to{stroke-dashoffset:0}}
 @media (prefers-reduced-motion:reduce){.hero-wave-flow{animation:none;stroke-dashoffset:520;opacity:.45}}
 </style>
+
 <style>
-/* project article extras */
-.stat-row.four{grid-template-columns:repeat(4,1fr)}
-.stat-row.four .num{font-size:clamp(24px,3vw,34px)}
-@media (max-width:700px){.stat-row.four{grid-template-columns:1fr 1fr}}
-.byline span b{color:#fff;font-weight:750}
-.prose code,.data-table code{
-  font-family:inherit;font-size:.88em;font-weight:650;color:var(--accent);
-  background:var(--accent-soft);border-radius:4px;padding:1px 7px;
-}
-.prose ol{margin:14px 0 0;padding-left:22px;color:var(--text-soft);font-size:15px;line-height:1.85}
-.prose ol li{margin-top:7px}
-.data-table tr.hot td{color:var(--text);font-weight:700}
-.data-table tr.hot td:first-child{color:var(--accent)}
-.data-table.kv{min-width:0}
-.fig-frame img{border-radius:10px;margin:0 auto}
-.fig-frame.demo{padding:0;overflow:hidden}
-.fig-frame.demo iframe{display:block;width:100%;height:900px;border:0}
-.codeblock{
-  margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:8px;
-  padding:18px 20px;overflow-x:auto;box-shadow:none;
-  font-family:var(--mono);
-  font-size:12.5px;line-height:1.75;color:var(--text-soft);white-space:pre;
-}
-.back-row{margin-bottom:0;position:relative;z-index:5}
-.back-row .back-link{margin-top:20px}
-</style>
-<style>
-/* p5 interactive demo — WONYEONJUNG tokens */
-.p5demo{margin:14px 0 4px}
-.p5tabs{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line-strong);border-radius:8px;padding:5px}
-.p5tab{flex:1;border:none;border-radius:6px;padding:9px 14px;font-weight:600;color:var(--text-soft);background:transparent;cursor:pointer;font-size:.92rem;font-family:inherit}
-.p5tab.is-on{background:var(--accent);color:var(--accent-ink);box-shadow:var(--shadow-sm)}
-.p5panel{padding-top:16px}
-.p5desc{background:var(--accent-soft);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;
-        padding:11px 15px;margin:4px 0 16px;color:var(--text-soft);font-size:.92rem;line-height:1.65}
-.p5desc .ic{font-weight:800;color:var(--accent);margin-right:6px}
-.p5desc b{color:var(--text)}
-/* 탭1 전/후 카드 */
-.p5ba-card{border:1px solid var(--line-strong);border-radius:10px;padding:18px 20px 20px;margin:16px 0;background:var(--surface);box-shadow:none}
-.p5prompt{display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:14px;background:var(--bg);border:1px solid var(--line);border-radius:8px}
-.p5prompt .tag{font-family:var(--mono);font-size:.7rem;font-weight:700;letter-spacing:.08em;color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:4px}
-.p5prompt .txt{font-size:1rem;color:var(--text)}
-.p5ba-imgs{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:760px;margin:0 auto}
-.p5ba-imgs figure{margin:0}
-.p5ba-imgs img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;display:block}
-.p5ba-imgs figcaption{text-align:center;font-size:.82rem;font-weight:600;color:var(--text-faint);margin-top:7px}
-.p5ba-imgs figcaption.lora{color:var(--accent)}
-.p5clip-row{display:flex;gap:22px;margin-top:14px}
-.p5clip{flex:1;display:flex;align-items:center;gap:9px;font-size:.82rem;color:var(--text-faint)}
-.p5clip .nm{width:38px;font-weight:700}
-.p5clip .track{flex:1;height:8px;background:var(--bg);border:1px solid var(--line);border-radius:5px;overflow:hidden}
-.p5clip .fill{height:100%;border-radius:5px}
-.p5clip .fill.base{background:var(--text-faint)}
-.p5clip .fill.lora{background:var(--accent)}
-.p5clip .v{width:46px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text);font-weight:600}
-/* 탭2 카테고리 그리드 */
-.p5cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:6px}
-.p5cat-card{border:1px solid var(--line-strong);border-radius:10px;overflow:hidden;background:var(--surface);box-shadow:none}
-.p5cat-card img{width:100%;height:200px;object-fit:cover;display:block}
-.p5cat-card .body{padding:11px 13px 14px}
-.p5cat-card .nm{font-size:1.02rem;font-weight:800;color:var(--text)}
-.p5cat-card .pr{font-size:.84rem;color:var(--text-faint);margin-top:3px;line-height:1.35}
-/* 탭3 스케일 */
-.p5sc-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-.p5sc-row figure{margin:0}
-.p5sc-row img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;display:block}
-.p5sc-row figcaption{text-align:center;font-size:.82rem;font-weight:700;color:var(--accent);margin-top:6px}
-.p5sc-barwrap{position:relative;height:26px;margin:14px 4px 2px}
-.p5sc-bar{position:absolute;top:9px;left:0;right:0;height:9px;border-radius:5px;background:linear-gradient(90deg,var(--line-strong) 0%,var(--grad-b) 55%,var(--accent) 100%)}
-.p5sc-dot{position:absolute;top:5px;width:17px;height:17px;border-radius:50%;background:var(--surface);border:3px solid var(--accent);transform:translateX(-50%)}
-.p5sc-ends{display:flex;justify-content:space-between;font-size:.8rem;font-weight:600;color:var(--text-faint);margin-top:4px}
-@media(max-width:560px){.p5sc-row{grid-template-columns:repeat(5,1fr);gap:5px}.p5sc-row figcaption{font-size:.66rem}}
-.p5pregen{font-size:.8rem;color:var(--text-faint);margin-top:10px}
+/* ============ ai-experience 시리즈 공통 ============ */
+.fig-frame{border:1px solid var(--line-strong);border-radius:10px;overflow:hidden;background:var(--surface);box-shadow:none}
+.fig-frame.demo iframe{display:block;width:100%;height:0px;border:0}
+.figure figcaption a{color:var(--accent);font-weight:700}
+.figure figcaption a:hover{text-decoration:underline;text-underline-offset:3px}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2FD06B;margin-right:8px;vertical-align:.06em;animation:livePulse 1.8s ease-out infinite}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(47,208,107,.55)}70%{box-shadow:0 0 0 7px rgba(47,208,107,0)}100%{box-shadow:0 0 0 0 rgba(47,208,107,0)}}
+.pl-grid{margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:700px){.pl-grid{grid-template-columns:1fr}}
+.pl-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;box-shadow:none;transition:border-color .25s ease}
+.pl-card:hover{border-color:var(--accent)}
+.pl-card b{display:block;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--accent);font-variant-numeric:tabular-nums}
+.pl-card p{margin-top:7px;font-size:13.5px;line-height:1.75;color:var(--text-soft)}
+.pl-card code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--text);background:var(--accent-soft);border-radius:6px;padding:1px 6px}
+table.cmp{width:100%;margin-top:20px;border-collapse:collapse;font-size:13.5px}
+table.cmp th{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--text-faint);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line-strong)}
+table.cmp td{padding:11px 12px;border-bottom:1px solid var(--line);line-height:1.7;color:var(--text-soft);vertical-align:top}
+table.cmp td:first-child{font-weight:750;color:var(--text);white-space:nowrap}
+table.cmp .win{color:var(--accent);font-weight:750}
+.say-grid{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:760px){.say-grid{grid-template-columns:1fr}}
+.say-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:15px 17px;box-shadow:none}
+.say-card b{display:block;font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--text-faint)}
+.say-card q{display:block;margin-top:9px;font-size:13.5px;line-height:1.8;color:var(--text);quotes:"\201C" "\201D";font-weight:600}
+.say-card span{display:block;margin-top:8px;font-size:12px;color:var(--text-soft);line-height:1.7}
+.xcards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:8px}
+@media (max-width:900px){.xcards{grid-template-columns:1fr}}
+a.xcard{position:relative;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;box-shadow:none;transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease}
+a.xcard::before{content:'';position:absolute;top:-1px;left:-1px;right:-1px;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .25s ease}
+a.xcard:hover{transform:translateY(-3px);box-shadow:0 12px 32px -18px rgba(5,70,200,.35);border-color:var(--accent)}
+a.xcard:hover::before{transform:scaleX(1)}
+a.xcard:hover h3{color:var(--accent)}
+.xthumb{position:relative;border-radius:6px;aspect-ratio:16/9.6;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.xthumb .xicon{width:clamp(36px,27%,52px);height:auto;position:relative;z-index:1}
+.xthumb .glyph,.xthumb .xicon{position:relative;z-index:1}
+.xthumb .glyph{font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:.04em;color:#F4F5F7;text-shadow:0 2px 18px rgba(0,0,0,.35)}
+.xthumb .tcode{position:absolute;left:12px;bottom:10px;font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:.08em;color:rgba(244,245,247,.8)}
+.xt-a{background:linear-gradient(140deg,#0546C8 0%,#04339B 100%)}
+.xt-a::after{content:none}
+.xt-b{background:linear-gradient(150deg,#04339B 0%,#031F66 100%)}
+.xt-b::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.3) 1.2px,transparent 1.8px);background-size:24px 24px;opacity:.4}
+.xt-c{background:linear-gradient(150deg,#0546C8 0%,#023087 100%)}
+.xt-c::before{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.08) 0 1px,transparent 1px 18px),repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0 1px,transparent 1px 18px)}
+a.xcard h3{margin-top:13px;padding:0 6px;font-size:16px;font-weight:750;line-height:1.45;letter-spacing:-.01em;transition:color .18s}
+a.xcard .cdesc{margin-top:6px;padding:0 6px;font-size:13px;color:var(--text-soft);line-height:1.7}
+a.xcard .more-cta{margin-top:auto;padding:13px 6px 4px;font-size:12px;font-weight:750;color:var(--accent)}
 </style>
 
 <nav class="site">
   <div class="nav-row">
-    <a class="wordmark" href="../../../../index.html">YEONJUNG<em>&nbsp;WON</em></a>
+    <a class="wordmark" href="../../../index.html">YEONJUNG<em>&nbsp;WON</em></a>
     <ul class="nav-links">
-      <li><a href="../../../../pages/about.html">About</a></li>
-      <li><a href="../../../../pages/projects.html" class="on">Projects</a></li>
-      <li><a href="../../../../pages/trend-log.html">Trend Log</a></li>
-      <li><a href="../../../../pages/contact.html">Contact</a></li>
+      <li><a href="../../../pages/about.html">About</a></li>
+      <li><a href="../../../pages/projects.html" class="on">Projects</a></li>
+      <li><a href="../../../pages/trend-log.html">Trend Log</a></li>
+      <li><a href="../../../pages/contact.html">Contact</a></li>
     </ul>
   </div>
 </nav>
 
 <main>
   <div class="hero-band">
-  <div class="hero-topbar hero-topbar--narrow"><a class="back-link hero-back" href="../index.html">&larr; CV Basic Projects</a></div>
-  <header class="article-head">
-    <span class="cat">GENERATIVE AI — P5 · TEXT-TO-FASHION</span>
-    <h1>Text-to-Fashion 이미지 생성</h1>
-    <p class="standfirst">Stable Diffusion v1.5를 FashionGen 데이터셋으로 LoRA 파인튜닝해, 텍스트 프롬프트로 패션 상품 이미지를 생성하고 파인튜닝 효과를 FID·CLIP으로 정량 검증했다.</p>
-    <p class="byline">
-      <span><b>TYPE</b> 도메인 파인튜닝 · 정량 검증</span>
-      <span><b>STACK</b> STABLE DIFFUSION · LORA · DIFFUSERS</span>
-      <span><b>OUTPUT</b> 생성 데모 (GRADIO · HUGGINGFACE)</span>
-    </p>
-  </header>
-  <svg class="hero-pipe" viewBox="0 0 1240 380" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+    <svg class="hero-pipe" viewBox="0 0 1240 560" preserveAspectRatio="xMidYMax slice" aria-hidden="true"></svg>
+    <div class="hero-topbar wrap"><a class="back-link hero-back" href="../../../pages/projects.html">&larr; Projects</a></div>
+    <header class="page-hero wrap">
+    <h1 data-text="TAXO">텍소노미 오피스</h1>
+    <p class="desc">브랜드마다 표기가 제각각인 패션 상품 용어를<br>하나의 표준 텍소노미로 통합하는 멀티에이전트 시스템이다.<br>11개의 AI 에이전트가 수집·멀티모달 분석·용어 매핑·검수를 분담하고,<br>사람은 판단이 필요한 핵심 결정에 개입한다.</p>
+    <p class="count">MULTIMODAL TAXONOMY · MULTI-AGENT · 2026</p>
+    </header>
   </div>
 
-  <div class="prose">
-
-    <div class="stat-row four">
-      <div class="stat"><div class="num">59.6</div><div class="lbl">FID (파인튜닝 후, rank4)</div></div>
-      <div class="stat"><div class="num">−16%</div><div class="lbl">FID 개선 (72.4 → 59.6)</div></div>
-      <div class="stat"><div class="num">rank 4</div><div class="lbl">rank 4·8 비교 → 4로 충분</div></div>
-      <div class="stat"><div class="num">49,148</div><div class="lbl">학습 이미지 (상위10·dedup)</div></div>
+  <!-- HOOK -->
+  <section class="wrap tk-sec" style="padding-top:44px">
+    <div class="tk">
+      <p class="tk-ey">The Problem</p>
+      <p class="tk-big">패션 데이터에서 가장 까다로운, <em>동의어</em></p>
+      <p class="tk-sub">같은 &lsquo;티셔츠&rsquo;여도 브랜드마다 표현하는 방식이 다르다. 패션에는 통일된 표준어가 없어, 브랜드 수만큼 서로 다른 언어가 존재하는 셈이다. 용어가 제각각이면 검색·필터·추천이 헛돌고, 트렌드 집계나 가격 비교처럼 브랜드를 가로지르는 분석은 아예 성립하지 않는다. 표준 텍소노미는 이 모든 분석이 딛고 설 <strong>기반</strong>이지만, 수백 개 브랜드에서 상품이 끊임없이 쏟아지는 규모에서는 사람이 일일이 맞출 수 없다. 그래서 흩어진 표현을 자동으로 수집하고 하나의 기준으로 통합하는 도구를 고안했다.</p>
     </div>
-
-    <h2>요약</h2>
-    <ul>
-      <li><strong>도메인 파인튜닝.</strong> 범용 Stable Diffusion v1.5를 FashionGen으로 <strong>LoRA 파인튜닝</strong>해, 패션 전문 텍스트를 상품 이미지로 생성.</li>
-      <li><strong>비교 실험.</strong> 파인튜닝 <strong>전 vs 후</strong>로 도메인 효과를 입증하고, <strong>LoRA rank 4 vs 8</strong>로 품질-비용 트레이드오프를 분석.</li>
-      <li><strong>정량 평가 &amp; 배포.</strong> 실제 캡션 1,000개로 생성해 <strong>FID 72.4 → 59.6 개선</strong>을 확인하고, 결과를 Gradio + HuggingFace Spaces 데모로 배포.</li>
-    </ul>
-
-    <h2>Demo</h2>
-    <p class="p5pregen">※ 사전 생성된 결과입니다.</p>
-
-    <div class="p5demo">
-      <div class="p5tabs">
-        <button class="p5tab is-on" data-t="1">1) 파인튜닝 전 / 후 비교</button>
-        <button class="p5tab" data-t="2">2) 카테고리별 생성 결과</button>
-        <button class="p5tab" data-t="3">3) LoRA 강도</button>
-      </div>
-
-      <div class="p5panel" data-p="1">
-        <div class="p5desc"><span class="ic">ℹ</span> 동일한 프롬프트를 <b>파인튜닝 전(base Stable Diffusion)</b>과 <b>후(LoRA)</b> 모델로 생성한 결과입니다.<br>※ 막대 그래프 = CLIP 점수(생성 이미지와 텍스트 프롬프트의 일치도)</div>
-        <div id="p5-ba"></div>
-      </div>
-
-      <div class="p5panel" data-p="2" hidden>
-        <div class="p5desc"><span class="ic">ℹ</span> 카테고리별 프롬프트를 사용해 생성한 이미지입니다.</div>
-        <div id="p5-cat" class="p5cat-grid"></div>
-      </div>
-
-      <div class="p5panel" data-p="3" hidden>
-        <div class="p5desc"><span class="ic">ℹ</span> <b>LoRA 강도(scale)</b>는 학습으로 익힌 패션 스타일을 생성에 얼마나 강하게 반영할지를 뜻합니다.<br>0~1 사이 값이며, <b>0이면 파인튜닝 전 base Stable Diffusion과 같고, 1로 갈수록 FashionGen 스타일이 강하게 반영</b>됩니다.</div>
-        <div id="p5-scale"></div>
+    <div class="collapse">
+      <div class="cq">
+        <div class="chaos"><span>반팔티</span><span>T-SHIRT</span><span>TEE</span><span>반소매 티셔츠</span></div>
+        <div class="fnl"><small>AI가 하나로 통합</small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v15M6 13l6 6 6-6"/></svg></div>
+        <div><span class="std">상의 &gt; 티셔츠</span></div>
       </div>
     </div>
+  </section>
 
-    <script>
-    (function(){
-      const base = "../assets/img/projects/p5";
-      // 탭1: 파인튜닝 전/후 (색 충실도 약했던 프롬프트 2개 제외 → idx 0·2·3·5)
-      const BA = [
-        {i:0, p:"A red floral midi dress with V-neck",          cb:0.3419, cl:0.3427},
-        {i:2, p:"An A-line houndstooth wool skirt",             cb:0.3354, cl:0.3226},
-        {i:3, p:"A beige boucle tweed jacket with gold buttons",cb:0.3507, cl:0.3167},
-        {i:5, p:"White leather low-top sneakers",               cb:0.3136, cl:0.3215}
-      ];
-      // 탭2: 카테고리
-      const CAT = [
-        {n:"TOPS",          p:"A white cotton long sleeve top",                       f:"TOPS.png"},
-        {n:"SWEATERS",      p:"A beige cable knit sweater",                           f:"SWEATERS.png"},
-        {n:"JACKETS & COATS",p:"A navy wool tailored coat",                           f:"JACKETS_COATS.png"},
-        {n:"PANTS",         p:"Black tailored trousers",                              f:"PANTS.png"},
-        {n:"JEANS",         p:"Blue slim fit denim jeans",                            f:"JEANS.png"},
-        {n:"SHIRTS",        p:"A light blue oxford shirt",                            f:"SHIRTS.png"},
-        {n:"SNEAKERS",      p:"White leather low-top sneakers",                       f:"SNEAKERS.png"},
-        {n:"DRESSES",       p:"A red floral V-neck midi dress",                       f:"DRESSES.png"},
-        {n:"SHORTS",        p:"Beige cotton chino shorts",                            f:"SHORTS.png"},
-        {n:"SHOULDER BAGS", p:"A black leather shoulder bag with gold hardware",      f:"SHOULDER_BAGS.png"}
-      ];
-      // 탭3: LoRA 강도
-      const SCALE_PROMPT = "A beige boucle tweed jacket with gold buttons";
-      const SCALE = [{s:"0.0",f:"s000.png"},{s:"0.25",f:"s025.png"},{s:"0.5",f:"s050.png"},{s:"0.75",f:"s075.png"},{s:"1.0",f:"s100.png"}];
-
-      const clipW = v => Math.round(Math.min(Math.max((v||0)/0.40,0),1)*100*10)/10;
-
-      // 탭1 빌드
-      document.getElementById('p5-ba').innerHTML = BA.map(x=>{
-        const nn=String(x.i).padStart(2,'0');
-        return `<div class="p5ba-card">
-          <div class="p5prompt"><span class="tag">PROMPT</span><span class="txt">${x.p}</span></div>
-          <div class="p5ba-imgs">
-            <figure><img loading="lazy" src="${base}/before_after/${nn}_base.png" alt="base"><figcaption>Base · Stable Diffusion</figcaption></figure>
-            <figure><img loading="lazy" src="${base}/before_after/${nn}_lora.png" alt="lora"><figcaption class="lora">LoRA · 파인튜닝</figcaption></figure>
-          </div>
-          <div class="p5clip-row">
-            <div class="p5clip"><span class="nm">Base</span><div class="track"><div class="fill base" style="width:${clipW(x.cb)}%"></div></div><span class="v">${x.cb.toFixed(4)}</span></div>
-            <div class="p5clip"><span class="nm">LoRA</span><div class="track"><div class="fill lora" style="width:${clipW(x.cl)}%"></div></div><span class="v">${x.cl.toFixed(4)}</span></div>
-          </div>
-        </div>`;
-      }).join('');
-
-      // 탭2 빌드
-      document.getElementById('p5-cat').innerHTML = CAT.map(c=>
-        `<div class="p5cat-card"><img loading="lazy" src="${base}/category/${c.f}" alt="${c.n}">
-          <div class="body"><div class="nm">${c.n}</div><div class="pr">${c.p}</div></div></div>`
-      ).join('');
-
-      // 탭3 빌드
-      const figs = SCALE.map(it=>`<figure><img loading="lazy" src="${base}/scale/${it.f}" alt="scale ${it.s}"><figcaption>${it.s}</figcaption></figure>`).join('');
-      const dots = SCALE.map((_,idx)=>`<div class="p5sc-dot" style="left:${((idx+0.5)/SCALE.length*100).toFixed(1)}%"></div>`).join('');
-      document.getElementById('p5-scale').innerHTML =
-        `<div class="p5prompt" style="margin-bottom:16px"><span class="tag">PROMPT</span><span class="txt">${SCALE_PROMPT}</span></div>
-         <div class="p5sc-row">${figs}</div>
-         <div class="p5sc-barwrap"><div class="p5sc-bar"></div>${dots}</div>
-         <div class="p5sc-ends"><span>약함 · base (0)</span><span>강함 · LoRA (1)</span></div>`;
-
-      // 탭 전환
-      const tabs=[...document.querySelectorAll('.p5tab')], panels=[...document.querySelectorAll('.p5panel')];
-      tabs.forEach(t=>t.addEventListener('click',()=>{
-        tabs.forEach(x=>x.classList.toggle('is-on', x===t));
-        const k=t.dataset.t; panels.forEach(p=>p.hidden=(p.dataset.p!==k));
-      }));
-    })();
-    </script>
-
-    <h2>문제 정의</h2>
-    <p>
-      범용 Stable Diffusion은 "자카드", "맨더린 칼라" 같은 <strong>패션 전문 용어와 상품컷 스타일</strong>을 잘 표현하지 못한다.
-      모델을 처음부터 학습하는 것은 비현실적이므로, 기성 SD에 <strong>LoRA 어댑터만 얹어 패션 도메인에 적응</strong>시키고
-      그 효과를 정량적으로 검증하는 것을 목표로 삼았다.
-    </p>
-
-    <h3>프로젝트에서 마주한 어려움</h3>
-    <p>검증된 라이브러리를 쓰더라도, 실제로 돌려 비교·배포하는 과정에서 여러 실무 이슈를 디버깅해야 했다.</p>
-    <figure class="figure">
-      <div class="fig-frame">
-        <table class="data-table">
-          <thead><tr><th>어려움</th><th>구체적 상황 / 해결</th></tr></thead>
-          <tbody>
-            <tr><td><b>라이브러리 버전 충돌</b></td><td>최신 transformers(5.x)·numpy(2.x)·setuptools(82)가 torch 2.1과 충돌 → 호환 버전으로 고정</td></tr>
-            <tr><td><b>정밀도(dtype) 충돌</b></td><td>학습 중 검증 생성에서 LoRA(fp32)+베이스(fp16) 혼합으로 크래시 → autocast로 감싸 해결</td></tr>
-            <tr><td><b>평가 프로토콜</b></td><td>FID는 소수 이미지로는 무의미 → 실제 캡션 1,000개로 대량 생성해 분포 비교</td></tr>
-            <tr><td><b>데이터 해상도 한계</b></td><td>보유 데이터가 256px → SD 네이티브 512로 업스케일, 한계는 정직하게 문서화</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </figure>
-
-    <h2>데이터 &amp; 방법</h2>
-    <figure class="figure">
-      <div class="fig-frame">
-        <table class="data-table kv">
-          <tbody>
-            <tr><td><b>데이터셋</b></td><td>FashionGen — 불균형(2,972배)·중복을 정리해 <strong>상위 10개 카테고리 + 상품당 1장 dedup → 49,148장</strong> (256→512 업스케일)</td></tr>
-            <tr><td><b>캡션</b></td><td><code>input_description</code> 그대로 사용 (CLIP 77토큰 초과 10%뿐 → 자동 truncation)</td></tr>
-            <tr><td><b>모델</b></td><td>Stable Diffusion v1.5 + <strong>LoRA</strong> (U-Net attention, VAE·Text Encoder·U-Net 본체는 frozen)</td></tr>
-            <tr><td><b>학습</b></td><td>ε-prediction MSE · AdamW 1e-4 · 15,000 step · fp16 · 단일 GPU (diffusers 적응)</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </figure>
-
-    <h2>평가 방법</h2>
-    <p>실제 패션 분포와 같은 조건에서 비교하기 위해, validation 캡션 1,000개로 이미지를 생성한 뒤 두 지표로 평가했다.</p>
-    <figure class="figure">
-      <div class="fig-frame">
-        <table class="data-table">
-          <thead><tr><th>지표</th><th>의미</th><th>방향</th></tr></thead>
-          <tbody>
-            <tr><td><b>FID</b></td><td>생성 이미지와 실제 패션 사진의 분포 차이</td><td>낮을수록 ↓ (실제에 가까움)</td></tr>
-            <tr><td><b>CLIP Score</b></td><td>생성 이미지와 텍스트 프롬프트의 일치도</td><td>높을수록 ↑</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </figure>
-
-    <h2>결과</h2>
-    <figure class="figure">
-      <div class="fig-frame">
-        <table class="data-table">
-          <thead><tr><th>모델</th><th>FID ↓</th><th>CLIP ↑</th></tr></thead>
-          <tbody>
-            <tr><td><b>base (파인튜닝 전)</b></td><td>72.37</td><td>0.2911</td></tr>
-            <tr class="hot"><td>LoRA rank 4</td><td>59.59</td><td>0.2807</td></tr>
-            <tr><td><b>LoRA rank 8</b></td><td>60.99</td><td>0.2815</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <figcaption>파인튜닝으로 FID가 72.4 → 59.6으로 약 16% 낮아져 실제 패션 이미지 분포에 더 가까워졌다. rank를 8로 키워도 거의 동일(오히려 미세 악화)해 rank 4로 충분(포화)함을 확인</figcaption>
-    </figure>
-
-    <h2>인사이트</h2>
-    <div class="pullquote">
-      정성적 변화(상품컷 스타일)와 정량적 개선(FID↓)이 일치했다 — 도메인 적응은 실제로 작동했다.
+  <!-- THE OFFICE -->
+  <section class="wrap tk-sec">
+    <div class="tk-h">
+      <p class="tk-ey">The Idea</p>
+      <h2>그래서, <em>AI 에이전트 11명을 두었다.</em></h2>
+      <p>혼자 다 하는 거대한 프롬프트 대신, <strong>일을 단계별로 나누고 각 단계에 역할을 부여했다.</strong> 그리고 그 과정을 눈에 보이도록 <strong>사무실</strong>로 만들었다. 누가 지금 무엇을 하는지, 일이 어떻게 넘어가는지 한눈에 보인다.</p>
     </div>
+    <figure class="figure" style="max-width:820px;margin-left:auto;margin-right:auto">
+      <div class="fig-frame"><img src="../../../assets/img/projects/taxonomy-office/office-live.gif" alt="사무실이 실시간으로 움직이는 애니메이션 — 크롤러·상품태깅·텍소노미매핑·검수가 각자 일하고, 완료된 작업이 다음 에이전트에게 서류로 전달된다." loading="lazy"></div>
+      <figcaption>수집 → 분석 → 매핑 → 검수가 실시간으로 흐르는 사무실. 일하는 에이전트는 머리 위 말풍선에 진행 상황이 뜨며, 끝나면 다음 에이전트에게 서류가 날아간다.</figcaption>
+    </figure>
+  </section>
 
-    <h3>1. 도메인 특화 효과 — 스타일 일관성</h3>
-    <p>
-      파인튜닝 전 base는 야외·라이프스타일 등 구도가 제각각인 반면, LoRA는 <strong>단색 배경 + 정면 + 모델 중앙 배치의 패션 상품컷 스타일</strong>로 일관되게 생성했다.
-      정성적 변화(상품컷 스타일)와 정량적 개선(FID&darr;)이 일치해, 도메인 적응이 실제로 작동했음을 확인했다.
-    </p>
+  <!-- MEET THE TEAM -->
+  <section class="wrap tk-sec">
+    <div class="tk-h">
+      <p class="tk-ey">The Team</p>
+      <h2>에이전트 소개</h2>
+      <p>에이전트마다 담당하는 단계가 다르다. 앞 단계의 결과를 받아 자기 몫을 처리하고 다음 단계로 넘기는 릴레이 구조여서, 한 곳에서 문제가 생겨도 전체를 되돌리지 않고 그 단계만 다시 실행하면 된다. 표준어가 바로 정해지지 않는 지점에서는 관련 에이전트끼리 의견을 주고받아 결론을 맞춘다.</p>
+    </div>
+    <div class="teams">
+      <div class="tgroup">
+        <div class="thead">📥 수집·계획<span class="tcount">2</span></div>
+        <div class="tcards">
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/planner.png" alt="작업계획"><div><b>작업계획</b><p>현황을 보고 다음 할 일을 제안한다. 사용자는 승인만.</p></div></div>
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/crawler.png" alt="크롤러"><div><b>크롤러</b><p>무신사에서 상품명·이미지·가격·후기·좋아요를 수집한다.</p></div></div>
+        </div>
+      </div>
+      <div class="tgroup">
+        <div class="thead">🏷 분석 파이프라인<span class="tcount">3</span></div>
+        <div class="tcards">
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/analyst.png" alt="상품태깅"><div><b>상품태깅</b><p>상품 이미지와 텍스트를 함께 보고 카테고리·속성을 뽑는다.</p></div></div>
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/unifier.png" alt="텍소노미매핑"><div><b>텍소노미매핑</b><p>브랜드 원문 용어를 표준어로 번역·매핑한다. 이 도구의 심장.</p></div></div>
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/qa.png" alt="검수"><div><b>검수</b><p>규칙과 AI로 분류 결과를 승인하거나 반려한다.</p></div></div>
+        </div>
+      </div>
+      <div class="tgroup">
+        <div class="thead">🛠 품질·설계<span class="tcount">3</span></div>
+        <div class="tcards">
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/auditor.png" alt="품질감사"><div><b>품질감사</b><p>승인된 결과를 무작위로 다시 확인한다. 기준 드리프트 감시.</p></div></div>
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/architect.png" alt="아키텍트"><div><b>아키텍트</b><p>사람 판단이 밀리면 표준 체계에 새 속성을 신설하자고 제안한다.</p></div></div>
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/tuner.png" alt="프롬프트개선"><div><b>프롬프트개선</b><p>반복되는 실수 패턴을 찾아 분석 지침을 고친다.</p></div></div>
+        </div>
+      </div>
+      <div class="tgroup">
+        <div class="thead">📊 운영<span class="tcount">3</span></div>
+        <div class="tcards">
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/reporter.png" alt="트렌드전략"><div><b>트렌드전략</b><p>가격·할인·좋아요 데이터로 트렌드 리포트를 쓴다.</p></div></div>
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/coach.png" alt="플랫폼온보딩"><div><b>플랫폼온보딩</b><p>새 플랫폼을 붙일 때 접근 전략과 필드 매핑을 진단한다.</p></div></div>
+          <div class="tm"><img class="tm-face" src="../../../assets/img/projects/taxonomy-office/avatars/manager.png" alt="매니저"><div><b>매니저</b><p>채팅 창구. &ldquo;바지 50개 수집해줘&rdquo; 같은 말을 알아듣고 일을 배분한다.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <h3>2. LoRA rank에 따른 성능 포화</h3>
-    <p>
-      LoRA rank를 4 → 8로 2배 키워도 FID·CLIP이 거의 동일했다. 즉 <strong>rank 4에서 이미 성능이 포화</strong>되어, 용량을 늘릴 실익이 없었다.
-      과도한 용량을 가정하기보다 <strong>필요한 최소 용량을 실험으로 규명</strong>했다.
-    </p>
+  <!-- HOW THEY WORK -->
+  <section class="wrap tk-sec">
+    <div class="tk-h">
+      <p class="tk-ey">The Rule</p>
+      <h2>AI에게 전부 맡기지 않는다 &mdash; <em>사람의 판단</em>이 개입한다.</h2>
+      <p>파이프라인은 <strong>크롤러 → 상품태깅 → 텍소노미매핑 → 검수</strong>로 흐른다. AI가 자신 있게 처리한 건 그대로 넘어가고, 표준어가 바로 정해지지 않는 용어는 세 에이전트(상품태깅 → 텍소노미매핑 → 검수)가 <strong>먼저 협의</strong>해 자체 확정한다. 그래도 결론이 갈릴 때만 사람에게 올라온다. 표준 체계를 바꾸는 개정안은 반드시 사람 승인을 거친다.</p>
+    </div>
+    <figure class="figure" style="max-width:760px;margin-left:auto;margin-right:auto">
+      <div class="fig-frame"><img src="../../../assets/img/projects/taxonomy-office/term-escalation.png" alt="용어 사전의 미분류 그룹 — 텍소노미매핑이 상품명·설명에서 뽑은 용어(라벨·레이어드·레더 트림 등)를 표준어로 옮기다 대응 값이 없어 '미분류 · 사람 판단 요청(🗣)'으로 남긴 목록." loading="lazy"></div>
+      <figcaption>① 용어 매핑에서의 사람 판단 &mdash; 텍소노미매핑이 상품명·설명에서 뽑은 용어를 표준어로 옮기다 <strong>표준 체계에 대응 값이 없으면</strong>, 억지로 채우지 않고 🗣 &lsquo;사람 판단 요청&rsquo;으로 남긴다. 사람은 ✏ 교정하거나 ✓ 확정한다.</figcaption>
+    </figure>
+    <figure class="figure" style="max-width:640px;margin-left:auto;margin-right:auto">
+      <div class="fig-frame"><img src="../../../assets/img/projects/taxonomy-office/human-decision.png" alt="반려된 상품의 사람 결정 패널 — AI가 '상품명은 Brown인데 색상을 블랙으로 분류해 원본과 모순'이라고 반려했고, 사람이 이대로 승인 · 직접 수정 · 재분류 중에서 결정한다." loading="lazy"></div>
+      <figcaption>② 분류 검수에서의 사람 판단 &mdash; 멀티모달 분석이 &lsquo;상품명은 Brown인데 색상은 블랙&rsquo;이라는 모순을 잡아 반려하면, 사람이 이대로 승인 · 직접 수정 · 재분류 중에서 최종 결정을 내린다.</figcaption>
+    </figure>
+  </section>
 
-    <h3>3. 정직한 한계</h3>
-    <p>
-      절대 FID(~60)는 목표(≤30)에 못 미쳤다. 원인은 데이터가 256px 업스케일이라 디테일에 한계가 있고, 평가 캡션이 치수·소재코드가 섞인 거친 실상품 설명이기 때문이다.
-      억지로 우회하지 않고 원인과 함께 한계로 남기고, 고해상도 데이터·캡션 정제를 향후 과제로 두었다.
-    </p>
+  <!-- RESULTS -->
+  <section class="wrap tk-sec">
+    <div class="tk-h">
+      <p class="tk-ey">The Run</p>
+      <h2>무신사 상품 <em>300개</em>로 테스트한 결과</h2>
+      <p>6개 카테고리(상의·아우터·바지·원피스/스커트·신발·가방)에서 각 50개씩. 전량 멀티모달 분석·표준 분류를 마쳤고, 검수에서 <strong>299개 승인 · 1개 반려</strong>로 정리됐다.</p>
+    </div>
+    <div class="nums">
+      <div class="n"><b>300<small>개</small></b><span>수집·분석·표준 분류를<br>완료한 상품</span></div>
+      <div class="n"><b>720<small>개</small></b><span>원문 용어를 표준어로<br>이어 붙인 매핑</span></div>
+      <div class="n"><b>184<small>개</small></b><span>수집한<br>브랜드</span></div>
+      <div class="n"><b>71<small>개</small></b><span>사람의 판단 개입이<br>필요한 용어</span></div>
+    </div>
+    <figure class="figure" style="max-width:900px;margin-left:auto;margin-right:auto">
+      <div class="fig-frame"><img src="../../../assets/img/projects/taxonomy-office/dashboard.png" alt="현황 대시보드 — 수집 300, 멀티모달 분석 300, 표준 분류 300, 검수 승인 299, 용어 매핑 720, 브랜드 184, API 비용 $13.12." loading="lazy"></div>
+      <figcaption>현황판 &mdash; 수집·분석·분류·검수 진행률과 용어/브랜드 통계, 실시간 API 비용, 그리고 다음 작업 제안까지 한 화면에서 확인한다.</figcaption>
+    </figure>
+    <div class="tk-h" style="margin-top:44px">
+      <p>특히 눈에 띄는 결과는 <strong>동의어 통합</strong>이다. 앞서 본 여러 표현이 실제로 하나의 표준어로 정리됐다. 이제 브랜드가 달라도 같은 기준으로 상품을 집계하고 비교할 수 있다.</p>
+    </div>
+    <figure class="figure" style="max-width:900px;margin-left:auto;margin-right:auto">
+      <div class="fig-frame"><img src="../../../assets/img/projects/taxonomy-office/synonyms.png" alt="동의어 통합 리포트 — 신발>샌들/슬리퍼에 24개 표현, 상의>티셔츠에 21개 표현이 하나로 정리된 목록." loading="lazy"></div>
+      <figcaption>동의어 통합 리포트 &mdash; 브랜드가 24가지로 써 놓은 &lsquo;샌들&rsquo;, 21가지로 써 놓은 &lsquo;티셔츠&rsquo;가 각각 하나의 표준어로 묶였다.</figcaption>
+    </figure>
+    <figure class="figure" style="max-width:900px;margin-left:auto;margin-right:auto">
+      <div class="fig-frame"><img src="../../../assets/img/projects/taxonomy-office/products.png" alt="상품 탭 — 분류된 상품 카드. 각 카드에 카테고리·색상·소재 칩과 승인 상태." loading="lazy"></div>
+      <figcaption>표준 분류된 상품 &mdash; 원문이 제각각이어도 카테고리·색상·소재가 표준 칩으로 정리된다.</figcaption>
+    </figure>
+    <div class="tk-h" style="margin-top:40px">
+      <p>표준어를 바로 정하기 어려운 용어 71개(헨리넥 · 시스루 · 워셔블 · 배색&hellip;)는 억지로 채우지 않고 <strong>&lsquo;미분류&rsquo;로 남겨 사람의 판단을 받도록</strong> 했다. 이런 용어가 쌓이면 아키텍트가 표준 체계에 새 속성을 만들자고 제안한다 &mdash; 텍소노미는 완성형이 아니라 자라는 체계다.</p>
+      <p>실제로 지금 &lsquo;바지&rsquo; 아래는 데님 팬츠·슬랙스·쇼츠 정도로만 갈라져 있다. 상품이 300개뿐이라 <strong>부츠컷 팬츠·버뮤다 쇼츠·트레이닝 쇼츠</strong> 같은 세부 갈래는 아직 &lsquo;쇼츠&rsquo;나 &lsquo;기타 바지&rsquo;에 뭉뚱그려져 있다. 데이터가 더 쌓여 이런 표현이 반복적으로 등장하면 <strong>아키텍트 에이전트가 &lsquo;여기에 새 가지를 만들자&rsquo;고 제안</strong>하고, 사람이 승인하면 표준 체계가 그만큼 깊어진다. 수집량이 늘수록 분류는 자동으로 촘촘해진다.</p>
+    </div>
+    <div class="grow" role="img" aria-label="바지 카테고리가 데이터가 쌓이면 부츠컷 팬츠·버뮤다 쇼츠·트레이닝 쇼츠 같은 세부 가지로 확장되는 그래픽">
+      <div class="ghead"><b>&lsquo;바지&rsquo; 카테고리가 자라는 방식</b></div>
+      <div class="gbranch"><span class="l2">쇼츠</span><span class="garw">→</span><span class="l3 new" style="--d:0s">버뮤다 쇼츠</span><span class="l3 new" style="--d:.7s">트레이닝 쇼츠</span></div>
+      <div class="gbranch"><span class="l2">기타 바지</span><span class="garw">→</span><span class="l3 new" style="--d:1.4s">부츠컷 팬츠</span></div>
+      <div class="gfoot">데이터가 쌓여 표현이 반복되면 <b>아키텍트가 새 가지를 제안</b>하고 표준 체계가 깊어진다.</div>
+    </div>
+  </section>
 
-    <h2>엔지니어링 노트</h2>
-    <ul>
-      <li><strong>재현 가능한 파이프라인.</strong> 데이터 전처리(H5 → imagefolder) → LoRA 학습(diffusers 적응) → 대량 생성 → FID·CLIP 평가 → 데모까지 end-to-end로 구성하고, 단계마다 검증 기준을 두었다.</li>
-      <li><strong>실무 트러블슈팅.</strong> 버전 충돌(transformers/numpy/setuptools), 학습 중 dtype 크래시(autocast), FID 대량생성 프로토콜, 대용량 바이너리 배포(HF API 업로드) 등을 진단·해결했다.</li>
-    </ul>
+  <!-- PULL QUOTE -->
+  <section class="wrap tk-sec">
+    <div class="pull">
+      <p>AI의 역할을 여러 에이전트로 나누고<br><em>사람의 개입 시점을 설계하는 것</em>이, 이 도구의 완성도를 결정했다.</p>
+    </div>
+  </section>
 
-    <a class="back-link" href="../index.html">&larr; CV 베이직 프로젝트로 돌아가기</a>
-  </div>
+  <!-- RECEIPT -->
+  <section class="wrap tk-sec">
+    <div class="tk-h">
+      <p class="tk-ey">The Cost</p>
+      <h2>API 비용</h2>
+      <p>상품 1개를 분석할 때마다 이미지를 포함한 AI 호출이 일어나므로 <strong>비용은 상품 수에 비례</strong>한다. 그래서 모든 호출의 토큰을 기록해 <strong>실시간 비용을 화면에 띄웠다.</strong></p>
+    </div>
+    <figure class="figure" style="max-width:640px;margin-left:auto;margin-right:auto">
+      <div class="fig-frame fig-frame--pad"><img src="../../../assets/img/projects/taxonomy-office/cost-bar.png" alt="도구 화면의 API 비용 바 — $13.12 약 ₩19,029, 오늘 API 비용 · 호출 386회, 누적 $13.12 (386회)." loading="lazy"></div>
+      <figcaption>화면에 실시간으로 뜨는 API 비용 &mdash; 모든 호출의 토큰을 합산해 오늘·누적 금액과 호출 수를 보여준다.</figcaption>
+    </figure>
+    <p class="tk" style="text-align:center;font-size:13.5px;color:var(--text-faint);margin-top:22px">300개 한 사이클의 실제 내역을 정리하면 &mdash;</p>
+    <div class="receipt">
+      <div class="rt">Taxonomy Office · 1 cycle</div>
+      <div class="rr"><span>상품 수집 (크롤링)</span><span>$0.00</span></div>
+      <div class="rr"><span>멀티모달 분석 · 매핑 · 검수</span><span>$13.12</span></div>
+      <div class="rr"><span>API 호출</span><span>386회</span></div>
+      <div class="rr tot"><span>합계</span><span>$13.12</span></div>
+      <div class="rc">약 ₩19,029 · 상품 1개당 약 4센트<br>수집 자체는 API를 안 써서 무료</div>
+    </div>
+    <div class="tk-h" style="margin-top:36px">
+      <p>실행 도중 크레딧이 바닥나 검수 단계에서 멈춘 적도 있었다. 하지만 <strong>모든 에이전트가 건별로 즉시 저장</strong>하도록 설계해, 크레딧을 채운 뒤 다시 실행하니 끝난 부분은 건너뛰고 남은 검수만 이어서 처리됐다. 데이터 손실은 없었다. 이 경험이 &lsquo;실시간 비용 표시&rsquo;를 부가 기능이 아니라 <strong>운영 필수 장치</strong>로 만든 계기가 되었다.</p>
+    </div>
+    <figure class="figure" style="max-width:940px;margin:48px auto 0">
+      <div class="fig-frame"><img src="../../../assets/img/projects/taxonomy-office/full-app.png" alt="텍소노미 오피스 전체 화면 — 왼쪽 픽셀 사무실에서 11개 에이전트가 팀별로 일하고, 오른쪽 패널에 현황 통계·API 비용·작업 제안이 보이며, 하단에 매니저 채팅창이 있다." loading="lazy"></div>
+      <figcaption>텍소노미 오피스 전체 화면 &mdash; 왼쪽 사무실에서 에이전트가 일하는 모습을 실시간으로 보고, 오른쪽에서 현황·텍소노미·상품·리포트를 확인하며, 하단 채팅으로 매니저에게 지시한다.</figcaption>
+    </figure>
+  </section>
+
+  <!-- FASHION MAJOR -->
+  <section class="wrap tk-sec" style="padding-bottom:8px">
+    <div class="tk-h">
+      <p class="tk-ey">Behind the Design</p>
+      <h2>패션 전공자로서 고민한 것</h2>
+    </div>
+    <article class="prose" style="padding-top:6px">
+      <h3>어디까지 나눌까</h3>
+      <p>가장 오래 붙잡고 있던 고민이 이거였다. 처음엔 속성을 최대한 잘게 쪼갰는데, 그러니 오히려 매핑이 안 됐다. 표준 값이 너무 많아 어디에 넣어야 할지 모호해진 것이다. 그렇다고 뭉뚱그리면 분석할 거리가 사라졌다. 결국 색상·소재·핏처럼 실무에서 정말 자주 쓰는 축만 남기고, 나머지는 데이터가 쌓이는 걸 보며 아키텍트가 늘려가도록 열어 뒀다.</p>
+      <h3>왜 이미지까지 보나</h3>
+      <p>상품명과 이미지를 함께 본 건 사실 선택의 여지가 없었다. 무신사 상품 페이지를 열어 보면 설명이 거의 다 이미지라, 텍스트만 긁어서는 소재감이나 핏을 알 방법이 없다. 옷은 결국 눈으로 보고 판단하는 거니까, 이미지를 같이 넣어 속성을 뽑게 했다.</p>
+      <h3>애매하면 비워 둔다</h3>
+      <p>옷 용어는 경계가 흐린 게 유독 많다. 크롭인지 레귤러인지, 워싱을 소재로 볼지 가공으로 볼지, 전공자인 나도 매번 헷갈린다. 이런 걸 AI에게 억지로 정하게 하면 그럴듯한 오답이 나오기 십상이다. 그래서 확신이 없을 땐 무난한 값으로 채우지 말고 &lsquo;미분류&rsquo;로 남기게 했다. 억지로 분류한 데이터보다, 모르는 건 모른다고 남긴 데이터가 더 믿을 만하다고 봤다.</p>
+    </article>
+  </section>
 </main>
 
-<footer>
+<footer id="contact">
   <div class="foot">
     <span class="fmark">YEONJUNG WON</span>
     <ul class="fnav">
@@ -1020,10 +1077,21 @@ footer{margin-top:110px;border-top:1px solid var(--line);padding-top:28px;paddin
     </ul>
     <span class="fnote">© 2026 — FASHION × AI, SEOUL</span>
   </div>
-</footer>
-
-<script>
-addEventListener('scroll',()=>{const h=document.documentElement;document.body.style.setProperty('--scroll',(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%')},{passive:true});
+</footer><script>
+(function(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) return;
+  var els = document.querySelectorAll('main > section, article.prose');
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold:.06});
+  els.forEach(function(el){
+    if (el.getBoundingClientRect().top > window.innerHeight * .88) {
+      el.classList.add('reveal');
+      io.observe(el);
+    }
+  });
+})();
+addEventListener('scroll',function(){var h=document.documentElement;document.body.style.setProperty('--scroll',(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%')},{passive:true});
 (()=>{const s=document.querySelector('.hero-pipe');if(!s)return;
 const W=1240,N=5;let g='';const waves=[];
 function wave(yb,amp,ph){let d='';for(let x=0;x<=W;x+=14){const y=yb+Math.sin(x/W*Math.PI*3+ph)*amp;d+=(x===0?'M':'L')+x+' '+y.toFixed(1);}return d;}
